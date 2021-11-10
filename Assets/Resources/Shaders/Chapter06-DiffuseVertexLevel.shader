@@ -1,0 +1,70 @@
+// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
+
+//Chapter06_标准光照模型中的逐顶点漫反射计算
+Shader "Unity Shaders Book/Chapter06-DiffuseVertexLevel"
+{
+    Properties
+    {
+        _Diffuse ("Diffuse Color", Color) = (1,1,1,1)
+    }
+    SubShader
+    {
+        Pass
+        {
+            //定义该pass在unity光照流水线中的角色
+            Tags {"LightMode"="ForwardBase"}
+            
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            //包含UNITY的头文件，为了使用_LightColor0等变量
+            #include "Lighting.cginc"
+
+            fixed4 _Diffuse;
+
+            //获取顶点、法线
+            struct a2v
+            {
+                float4 vertex : POSITION;
+                float3 normal : NORMAL;
+            };
+
+            //输出裁剪空间顶点坐标、颜色
+            struct v2f
+            {
+                float4 pos : SV_POSITION;
+                fixed3 color : COLOR;
+            };
+            
+            v2f vert (a2v v)
+            {
+                v2f o;
+                o.pos = UnityObjectToClipPos(v.vertex);
+
+                //按照光照模型，要计算漫反射，需要4个入参：入射光线的颜色+强度+方向、材质的漫反射系数、表面法线
+                
+                //获得环境光
+                fixed3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
+                //unity_WorldToObject 将顶点/法线从世界空间转换到模型空间，这里放在后面，因为对于法线来说是通过逆矩阵来计算世界空间的，那么就是反向转换、转换到世界空间
+                //mul矩阵乘法，mul(M,v)：矩阵乘向量；mul(v,M)：向量乘矩阵
+                fixed3 worldNormal = normalize(mul(v.normal, (float3x3)unity_WorldToObject));
+                //_WorldSpaceLightPos0获取唯一光源；normalize()归一化
+                fixed3 worldLight = normalize(_WorldSpaceLightPos0.xyz);
+                //按照公式计算漫反射。saturate()把参数截取在[0,1]范围之内；
+                //_LightColor0.rgb：光照强度；_Diffuse.rgb：漫反射系数；
+                fixed3 diffuse = _LightColor0.rgb * _Diffuse.rgb * saturate(dot(worldNormal, worldLight));
+                //环境光+漫反射
+                o.color = ambient + diffuse;
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target
+            {
+                return fixed4(i.color,1.0);
+            }
+            ENDCG
+        }
+    }
+    Fallback "Diffuse"
+}
