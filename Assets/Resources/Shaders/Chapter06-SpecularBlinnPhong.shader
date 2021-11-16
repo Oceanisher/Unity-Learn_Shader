@@ -90,5 +90,5 @@ Shader "Unity Shaders Book/Chapter06-SpecularBlinnPhong"
             ENDCG
         }
     }
-    Fallback "Diffuse"
+    Fallback "Specular"
 }

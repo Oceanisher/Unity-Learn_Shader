@@ -83,5 +83,5 @@ Shader "Unity Shaders Book/Chapter06-SpecularVertexLevel"
             ENDCG
         }
     }
-    Fallback "Diffuse"
+    Fallback "Specular"
 }
