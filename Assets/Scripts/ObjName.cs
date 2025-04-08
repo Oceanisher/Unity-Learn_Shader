@@ -18,8 +18,6 @@ public class ObjName : MonoBehaviour
     private void Start()
     {
         _camera = Camera.main;
-        
-        
     }
 
     private void OnGUI()
