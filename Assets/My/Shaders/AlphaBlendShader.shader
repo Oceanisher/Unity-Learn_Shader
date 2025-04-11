@@ -1,17 +1,21 @@
-//AlphaTest裁剪
-Shader "Unlit/AlphaTestShader"
+//透明混合
+Shader "Unlit/AlphaBlend"
 {
     Properties
     {
         _MainTex ("主纹理", 2D) = "white" {}
         _Color("颜色", Color) = (1, 1, 1, 1)
         _Cutoff("Alpha裁剪阈值", Range(0, 1)) = 0.5
+        _AlphaScale("透明度", Range(0, 1)) = 1
     }
     SubShader
     {
-        Tags { "RenderType"="TransparentCutout" "IgnoreProjector"="True" "Queue"="AlphaTest" "LightMode"="ForwardBase" }
+        Tags { "RenderType"="Transparent" "IgnoreProjector"="True" "Queue"="Transparent" "LightMode"="ForwardBase" }
         LOD 100
         
+        ZWrite Off
+        Blend SrcAlpha OneMinusSrcAlpha
+
         Pass
         {
             CGPROGRAM
@@ -39,7 +43,7 @@ Shader "Unlit/AlphaTestShader"
             sampler2D _MainTex;
             float4 _MainTex_ST;
             float4 _Color;
-            float _Cutoff;
+            float _AlphaScale;
 
             v2f vert (appdata v)
             {
@@ -57,8 +61,6 @@ Shader "Unlit/AlphaTestShader"
                 float3 worldLightDir = normalize(UnityWorldSpaceLightDir(i.worldPos));
                 //纹理采样
                 fixed4 texColor = tex2D(_MainTex, i.uv);
-                //Alpha裁剪
-                clip(texColor.a - _Cutoff);
                 
                 //反射率
                 float3 albedo = texColor.rgb * _Color.rgb;
@@ -68,10 +70,10 @@ Shader "Unlit/AlphaTestShader"
                 float3 diffuse = _LightColor0 * albedo * (0.5 * max(0, dot(i.worldNormal, worldLightDir)) + 0.5);
 
                 //总和
-                return fixed4(ambient + diffuse, 1.0);
+                return fixed4(ambient + diffuse, texColor.a * _AlphaScale);
             }
             ENDCG
         }
     }
-    Fallback "Legacy Shaders/VertexLit"
+    Fallback "Unlit/Transparent"
 }
