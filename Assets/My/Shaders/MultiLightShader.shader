@@ -1,7 +1,4 @@
-// Upgrade NOTE: replaced '_LightMatrix0' with 'unity_WorldToLight'
-
-// Upgrade NOTE: replaced '_LightMatrix0' with 'unity_WorldToLight'
-
+//多光源，加入其他光源的法线方向考虑
 Shader "My/MultiLight"
 {
     Properties
@@ -209,13 +206,14 @@ Shader "My/MultiLight"
                 #ifdef USING_DIRECTIONAL_LIGHT
                 fixed attn = 1.0;
                 #else
+                    //非平行光还要看法线和光源的方向，如果夹角超过90，那么不受影响
                     #if defined (POINT)
                     float3 lightCoord = mul(unity_WorldToLight, float4(i.posWorld, 1)).xyz;
-                    //dot().rr的意思是，用点乘的值构建一个新的向量(r,r)；UNITY_ATTEN_CHANNEL表示使用衰减通道
-                    fixed attn = tex2D(_LightTexture0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
+                    //点乘的结果是点到光源距离的平方。dot().rr的意思是，用点乘的值构建一个新的向量(r,r)；UNITY_ATTEN_CHANNEL表示使用衰减通道
+                    fixed attn = (dot(i.lightDir, tangentNormal) > 0) * tex2D(_LightTexture0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
                     #elif defined (SPOT)
                     float4 lightCoord = mul(unity_WorldToLight, float4(i.posWorld, 1));
-                    fixed attn = (lightCoord.z > 0) * tex2D(_LightTexture0, lightCoord.xy / lightCoord.w + 0.5).w * tex2D(_LightTextureB0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
+                    fixed attn = (dot(i.lightDir, tangentNormal) > 0) * (lightCoord.z > 0) * tex2D(_LightTexture0, lightCoord.xy / lightCoord.w + 0.5).w * tex2D(_LightTextureB0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
                     #else
                     fixed attn = 1.0;
                     #endif
