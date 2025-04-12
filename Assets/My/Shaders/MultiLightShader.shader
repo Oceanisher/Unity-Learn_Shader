@@ -1,4 +1,5 @@
 //多光源，加入其他光源的法线方向考虑
+//加入阴影。由于Fallback中的shader已经包含了阴影Caster的pass，所以这里只需要实现读取阴影纹理并写入颜色即可。
 Shader "My/MultiLight"
 {
     Properties
@@ -22,12 +23,13 @@ Shader "My/MultiLight"
             Tags {"LightMode"="ForwardBase"}
             
             CGPROGRAM
-            #pragma multi_compile_fwdbasealpha
+            #pragma multi_compile_fwdbase
             #pragma vertex vert
             #pragma fragment frag
 
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc"
+            #include "AutoLight.cginc"
 
             float4 _Color;
             //变量对应
@@ -58,6 +60,8 @@ Shader "My/MultiLight"
                 float4 uv : TEXCOORD0;
                 float3 lightDir : TEXCOORD1;
                 float3 viewDir : TEXCOORD2;
+                //阴影纹理
+                SHADOW_COORDS(3)
             };
 
             //把坐标都转换到切线空间，并传递到片元着色器
@@ -81,6 +85,8 @@ Shader "My/MultiLight"
                 o.lightDir = normalize(mul(rotation, ObjSpaceLightDir(v.vertex)).xyz);
                 //观察方向转换到切线空间
                 o.viewDir = normalize(mul(rotation, ObjSpaceViewDir(v.vertex)).xyz);
+                //计算阴影纹理
+                TRANSFER_SHADOW(o)
                 return o;
             }
 
@@ -97,6 +103,8 @@ Shader "My/MultiLight"
                 //法线的z保证是正数
                 tangentNormal.z = sqrt(1.0 - saturate(dot(tangentNormal.xy, tangentNormal.xy)));
 
+                //阴影
+                fixed shadow = SHADOW_ATTENUATION(i);
                 //反射率
                 float3 albedo = tex2D(_MainTex, i.uv.xy) * _Color;
                 //环境光
@@ -107,8 +115,8 @@ Shader "My/MultiLight"
                 float3 halfDir = normalize(i.lightDir + i.viewDir);
                 float3 specular = _LightColor0 * _Specular.rgb * pow(max(0, dot(tangentNormal, halfDir)), _Gloss);
 
-                //总和
-                return fixed4(ambient + diffuse + specular, 1.0);
+                //总和，环境光不需要乘以阴影
+                return fixed4(ambient + (diffuse + specular) * shadow, 1.0);
             }
             ENDCG
         }
@@ -124,6 +132,8 @@ Shader "My/MultiLight"
             
             CGPROGRAM
             #pragma multi_compile_fwdadd
+            //开启其他光源阴影
+            // #pragma multi_compile_fwdadd_fullshadows
             #pragma vertex vert
             #pragma fragment frag
 
@@ -161,6 +171,8 @@ Shader "My/MultiLight"
                 float3 lightDir : TEXCOORD1;
                 float3 viewDir : TEXCOORD2;
                 float3 posWorld : TEXCOORD3;
+                //阴影纹理
+                SHADOW_COORDS(4)
             };
 
             //把坐标都转换到切线空间，并传递到片元着色器
@@ -186,6 +198,8 @@ Shader "My/MultiLight"
                 o.lightDir = normalize(mul(rotation, ObjSpaceLightDir(v.vertex)).xyz);
                 //观察方向转换到切线空间
                 o.viewDir = normalize(mul(rotation, ObjSpaceViewDir(v.vertex)).xyz);
+                //计算阴影纹理
+                TRANSFER_SHADOW(o)
                 return o;
             }
 
@@ -204,21 +218,28 @@ Shader "My/MultiLight"
 
                 //计算光源的强度
                 #ifdef USING_DIRECTIONAL_LIGHT
-                fixed attn = 1.0;
+                fixed atten = 1.0;
                 #else
                     //非平行光还要看法线和光源的方向，如果夹角超过90，那么不受影响
                     #if defined (POINT)
                     float3 lightCoord = mul(unity_WorldToLight, float4(i.posWorld, 1)).xyz;
-                    //点乘的结果是点到光源距离的平方。dot().rr的意思是，用点乘的值构建一个新的向量(r,r)；UNITY_ATTEN_CHANNEL表示使用衰减通道
-                    fixed attn = (dot(i.lightDir, tangentNormal) > 0) * tex2D(_LightTexture0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
+                    //点乘的结果是点到光源距离的平方，避免开方。dot().rr的意思是，用点乘的值构建一个新的向量(r,r)；UNITY_ATTEN_CHANNEL表示使用衰减通道
+                    fixed atten = (dot(i.lightDir, tangentNormal) > 0) * tex2D(_LightTexture0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
                     #elif defined (SPOT)
                     float4 lightCoord = mul(unity_WorldToLight, float4(i.posWorld, 1));
-                    fixed attn = (dot(i.lightDir, tangentNormal) > 0) * (lightCoord.z > 0) * tex2D(_LightTexture0, lightCoord.xy / lightCoord.w + 0.5).w * tex2D(_LightTextureB0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
+                    fixed atten = (dot(i.lightDir, tangentNormal) > 0) * (lightCoord.z > 0) * tex2D(_LightTexture0, lightCoord.xy / lightCoord.w + 0.5).w * tex2D(_LightTextureB0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANNEL;
                     #else
-                    fixed attn = 1.0;
+                    fixed atten = 1.0;
                     #endif
                 #endif
 
+                //阴影
+                fixed shadow = SHADOW_ATTENUATION(i);
+
+                //也可以用内置函数直接同时计算阴影、光照衰减
+                //第一个参数不用自己定义，这个函数里会定义出来，也叫atten；第二个参数是v2f，第三个参数是世界空间顶点
+                // UNITY_LIGHT_ATTENUATION(atten, i, i.posWorld);
+                
                 //反射率
                 float3 albedo = tex2D(_MainTex, i.uv.xy) * _Color;
                 //漫反射
@@ -228,11 +249,12 @@ Shader "My/MultiLight"
                 float3 specular = _LightColor0 * _Specular.rgb * pow(max(0, dot(tangentNormal, halfDir)), _Gloss);
 
                 //总和
-                return fixed4((diffuse + specular) * attn, 1.0);
+                return fixed4((diffuse + specular) * atten * shadow, 1.0);
             }
             ENDCG
         }
     }
 
+    //如果自己不写阴影投射Pass，会在这个默认的里面找
     Fallback "Diffuse"
 }
