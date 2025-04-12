@@ -1,5 +1,5 @@
 //透明混合
-Shader "Unlit/AlphaBlend"
+Shader "My/AlphaBlend"
 {
     Properties
     {

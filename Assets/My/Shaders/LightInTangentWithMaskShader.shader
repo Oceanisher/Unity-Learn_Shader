@@ -1,7 +1,7 @@
 //光照模型，Blinn-Phong模型，高光遮罩
 //半Lambert
 //切线空间下计算光照，把顶点坐标转换到切线空间下。可以在顶点着色器中进行计算，计算量少。
-Shader "Unlit/LightInTangentWithMask"
+Shader "My/LightInTangentWithMask"
 {
     Properties
     {

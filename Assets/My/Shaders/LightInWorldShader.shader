@@ -1,7 +1,7 @@
 //光照模型，Blinn-Phong模型
 //半Lambert
 //世界空间下计算光照，把切线空间的法线转到到世界坐标下。在片元着色器中计算，计算量多，但是如果要使用CubeMap进行环境映射，就需要用这种。
-Shader "Unlit/LightInWorld"
+Shader "My/LightInWorld"
 {
     Properties
     {
