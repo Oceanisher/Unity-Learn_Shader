@@ -1,4 +1,5 @@
-//AlphaTest裁剪
+//AlphaTest裁剪，双面渲染
+//关闭背面剔除
 Shader "My/AlphaTestShader"
 {
     Properties
@@ -11,6 +12,7 @@ Shader "My/AlphaTestShader"
     {
         Tags { "RenderType"="TransparentCutout" "IgnoreProjector"="True" "Queue"="AlphaTest" "LightMode"="ForwardBase" }
         LOD 100
+        Cull Off
         
         Pass
         {
