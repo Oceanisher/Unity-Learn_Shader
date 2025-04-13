@@ -6,6 +6,7 @@ Shader "My/AlphaTestShader"
     {
         _MainTex ("主纹理", 2D) = "white" {}
         _Color("颜色", Color) = (1, 1, 1, 1)
+        //VertexLit中投影pass使用这个变量名，所以必须要叫这个名称
         _Cutoff("Alpha裁剪阈值", Range(0, 1)) = 0.5
     }
     SubShader
@@ -75,5 +76,5 @@ Shader "My/AlphaTestShader"
             ENDCG
         }
     }
-    Fallback "Legacy Shaders/VertexLit"
+    Fallback "Legacy Shaders/Transparent/Cutout/VertexLit"
 }
