@@ -79,7 +79,7 @@ Shader "My/Reflection"
                 float3 worldNormal = normalize(i.normalWorld);
                 
                 //反射盒子采样
-                float3 reflectColor = texCUBE(_CubeMap, worldReflectDir).rgb * _ReflectionColor;
+                float3 reflectColor = texCUBE(_CubeMap, worldReflectDir).rgb * _ReflectionColor * _ReflectionAmount;
                 
                 //阴影
                 fixed shadow = SHADOW_ATTENUATION(i);
