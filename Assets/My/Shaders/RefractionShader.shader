@@ -1,13 +1,14 @@
-//反射纹理
+//折射纹理
 //加入阴影。由于Fallback中的shader已经包含了阴影Caster的pass，所以这里只需要实现读取阴影纹理并写入颜色即可。
-Shader "My/Reflection"
+Shader "My/Refraction"
 {
     Properties
     {
         _Color("颜色", Color) = (1.0, 1.0, 1.0, 1.0)
-        _ReflectionColor("反射颜色", Color) = (1.0, 1.0, 1.0, 1.0)
-        _ReflectionAmount("反射程度", Range(0, 1)) = 1.0
-        _CubeMap("反射纹理", Cube) = "_Skybox" {}
+        _RefractionColor("折射颜色", Color) = (1.0, 1.0, 1.0, 1.0)
+        _RefractionAmount("折射程度", Range(0, 1)) = 1.0
+        _RefractionRatio("折射率", Range(0, 1)) = 0.5
+        _CubeMap("折射纹理", Cube) = "_Skybox" {}
     }
     SubShader
     {
@@ -29,8 +30,9 @@ Shader "My/Reflection"
             #include "AutoLight.cginc"
 
             float4 _Color;
-            float4 _ReflectionColor;
-            float _ReflectionAmount;
+            float4 _RefractionColor;
+            float _RefractionAmount;
+            float _RefractionRatio;
             samplerCUBE _CubeMap;
 
             //输入：顶点、法线
@@ -48,7 +50,7 @@ Shader "My/Reflection"
                 float3 normalWorld : TEXCOORD1;
                 float3 lightDir : TEXCOORD2;
                 float3 viewDir : TEXCOORD3;
-                float3 reflectDir : TEXCOORD4;
+                float3 refractionDir : TEXCOORD4;
                 //阴影纹理
                 SHADOW_COORDS(5)
             };
@@ -62,9 +64,11 @@ Shader "My/Reflection"
                 o.posWorld = mul(UNITY_MATRIX_M, v.vertex);
                 o.normalWorld = UnityObjectToWorldNormal(v.normal);
                 o.lightDir = UnityObjectToWorldDir(ObjSpaceLightDir(v.vertex));
-                o.viewDir = UnityObjectToWorldDir(ObjSpaceViewDir(v.vertex));
-                //计算反射光线
-                o.reflectDir = reflect(-o.viewDir, o.normalWorld);
+                // o.viewDir = UnityObjectToWorldDir(ObjSpaceViewDir(v.vertex));
+                o.viewDir = UnityWorldSpaceViewDir(o.posWorld);
+                
+                //计算折射光线
+                o.refractionDir = refract(-normalize(o.viewDir), normalize(o.normalWorld), _RefractionRatio);
                 //计算阴影纹理
                 TRANSFER_SHADOW(o)
                 return o;
@@ -74,22 +78,24 @@ Shader "My/Reflection"
             fixed4 frag (v2f i) : SV_Target
             {
                 float3 worldLightDir = normalize(i.lightDir);
-                float3 worldViewDir = normalize(i.viewDir);
-                float3 worldReflectDir = normalize(i.reflectDir);
+                float3 worldRefractionDir = normalize(i.refractionDir);
                 float3 worldNormal = normalize(i.normalWorld);
-                
+
                 //反射盒子采样
-                float3 reflectColor = texCUBE(_CubeMap, worldReflectDir).rgb * _ReflectionColor * _ReflectionAmount;
+                float3 reflectColor = texCUBE(_CubeMap, worldRefractionDir).rgb * _RefractionColor * _RefractionAmount;
                 
                 //阴影
                 fixed shadow = SHADOW_ATTENUATION(i);
                 //环境光
                 float3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
                 //漫反射
-                float3 diffuse = _LightColor0 * _Color * reflectColor * (0.5 * max(0, dot(worldNormal, worldLightDir)) + 0.5);
+                float3 diffuse = _LightColor0 * reflectColor * (0.5 * max(0, dot(worldNormal, worldLightDir)) + 0.5);
 
                 //总和，环境光不需要乘以阴影
                 return fixed4(ambient + diffuse * shadow, 1.0);
+
+                // UNITY_LIGHT_ATTENUATION(atten, i, i.posWorld);
+                // return fixed4(ambient + lerp(diffuse, reflectColor, _RefractionAmount) * atten, 1.0);
             }
             ENDCG
         }
