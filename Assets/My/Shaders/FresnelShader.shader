@@ -1,14 +1,12 @@
-//折射纹理
+//菲涅尔反射
 //加入阴影。由于Fallback中的shader已经包含了阴影Caster的pass，所以这里只需要实现读取阴影纹理并写入颜色即可。
-Shader "My/Refraction"
+Shader "My/Fresnel"
 {
     Properties
     {
         _Color("颜色", Color) = (1.0, 1.0, 1.0, 1.0)
-        _RefractionColor("折射颜色", Color) = (1.0, 1.0, 1.0, 1.0)
-        _RefractionAmount("折射程度", Range(0, 1)) = 1.0
-        _RefractionRatio("折射率", Range(0, 1)) = 0.5
-        _CubeMap("折射纹理", Cube) = "_Skybox" {}
+        _FresnelScale("菲涅尔缩放", Range(0, 1)) = 1
+        _CubeMap("立方体盒", Cube) = "_Skybox" {}
     }
     SubShader
     {
@@ -30,9 +28,7 @@ Shader "My/Refraction"
             #include "AutoLight.cginc"
 
             float4 _Color;
-            float4 _RefractionColor;
-            float _RefractionAmount;
-            float _RefractionRatio;
+            float _FresnelScale;
             samplerCUBE _CubeMap;
 
             //输入：顶点、法线
@@ -50,7 +46,7 @@ Shader "My/Refraction"
                 float3 normalWorld : TEXCOORD1;
                 float3 lightDir : TEXCOORD2;
                 float3 viewDir : TEXCOORD3;
-                float3 refractionDir : TEXCOORD4;
+                float3 reflectWorld : TEXCOORD4;
                 //阴影纹理
                 SHADOW_COORDS(5)
             };
@@ -63,12 +59,9 @@ Shader "My/Refraction"
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.posWorld = mul(UNITY_MATRIX_M, v.vertex);
                 o.normalWorld = UnityObjectToWorldNormal(v.normal);
-                o.lightDir = UnityObjectToWorldDir(ObjSpaceLightDir(v.vertex));
-                // o.viewDir = UnityObjectToWorldDir(ObjSpaceViewDir(v.vertex));
+                o.lightDir = UnityWorldSpaceLightDir(o.posWorld);
                 o.viewDir = UnityWorldSpaceViewDir(o.posWorld);
-                
-                //计算折射光线
-                o.refractionDir = refract(-normalize(o.viewDir), normalize(o.normalWorld), _RefractionRatio);
+                o.reflectWorld = reflect(-o.viewDir, o.normalWorld);
                 //计算阴影纹理
                 TRANSFER_SHADOW(o)
                 return o;
@@ -77,26 +70,22 @@ Shader "My/Refraction"
             //使用的坐标都是切线空间坐标
             fixed4 frag (v2f i) : SV_Target
             {
-                // float3 worldLightDir = normalize(i.lightDir);
                 float3 worldLightDir = normalize(UnityWorldSpaceLightDir(i.posWorld));
-                float3 worldRefractionDir = normalize(i.refractionDir);
                 float3 worldNormal = normalize(i.normalWorld);
+                float3 worldViewDir = normalize(i.viewDir);
 
                 //反射盒子采样
-                float3 reflectColor = texCUBE(_CubeMap, worldRefractionDir).rgb * _RefractionColor * _RefractionAmount;
+                float3 reflectColor = texCUBE(_CubeMap, i.reflectWorld).rgb;
+                //计算菲涅尔反射
+                fixed fresnel = _FresnelScale + (1 - _FresnelScale) * pow(1 - dot(worldViewDir, worldNormal), 5);
                 
-                //阴影
-                fixed shadow = SHADOW_ATTENUATION(i);
                 //环境光
                 float3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
+                UNITY_LIGHT_ATTENUATION(atten, i, i.posWorld);
                 //漫反射
-                float3 diffuse = _LightColor0 * reflectColor * (0.5 * max(0, dot(worldNormal, worldLightDir)) + 0.5);
-
-                //总和，环境光不需要乘以阴影
-                return fixed4(ambient + diffuse * shadow, 1.0);
-
-                // UNITY_LIGHT_ATTENUATION(atten, i, i.posWorld);
-                // return fixed4(ambient + lerp(diffuse, reflectColor, _RefractionAmount) * atten, 1.0);
+                float3 diffuse = _LightColor0.rgb * _Color.rgb * (0.5 * max(0, dot(worldNormal, worldLightDir)) + 0.5);
+                
+                return fixed4(ambient + lerp(diffuse, reflectColor, saturate(fresnel)) * atten, 1.0);
             }
             ENDCG
         }
