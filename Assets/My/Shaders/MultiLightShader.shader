@@ -110,10 +110,10 @@ Shader "My/MultiLight"
                 //环境光
                 float3 ambient = UNITY_LIGHTMODEL_AMBIENT * albedo;
                 //漫反射
-                float3 diffuse = _LightColor0 * albedo * (0.5 * max(0, dot(tangentNormal, i.lightDir)) + 0.5);
+                float3 diffuse = _LightColor0.rgb * albedo * (0.5 * max(0, dot(tangentNormal, i.lightDir)) + 0.5);
                 //高光
                 float3 halfDir = normalize(i.lightDir + i.viewDir);
-                float3 specular = _LightColor0 * _Specular.rgb * pow(max(0, dot(tangentNormal, halfDir)), _Gloss);
+                float3 specular = _LightColor0.rgb * _Specular.rgb * pow(max(0, dot(tangentNormal, halfDir)), _Gloss);
 
                 //总和，环境光不需要乘以阴影
                 return fixed4(ambient + (diffuse + specular) * shadow, 1.0);
@@ -241,7 +241,7 @@ Shader "My/MultiLight"
                 // UNITY_LIGHT_ATTENUATION(atten, i, i.posWorld);
                 
                 //反射率
-                float3 albedo = tex2D(_MainTex, i.uv.xy) * _Color;
+                float3 albedo = tex2D(_MainTex, i.uv.xy) * _Color.rgb;
                 //漫反射
                 float3 diffuse = _LightColor0 * albedo * (0.5 * max(0, dot(tangentNormal, i.lightDir)) + 0.5);
                 //高光
