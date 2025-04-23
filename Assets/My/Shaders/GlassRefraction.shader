@@ -1,20 +1,18 @@
-//光照模型，Blinn-Phong模型
-//半Lambert
-//切线空间下计算光照，把顶点坐标转换到切线空间下。可以在顶点着色器中进行计算，计算量少。
-Shader "My/Glass"
+//玻璃折射，使用渲染纹理
+//反射+折射
+Shader "My/GlassRefraction"
 {
     Properties
     {
-        _Color("颜色", Color) = (1.0, 1.0, 1.0, 1.0)
         _MainTex("主纹理", 2D) = "white" {}
         _BumpTex("法线纹理", 2D) = "white" {}
-        _BumpScale("凹凸程度", float) = 1.0
-        _Specular("高光颜色", Color) = (1.0, 1.0, 1.0, 1.0)
-        _Gloss("高光锐度", Range(8.0, 256)) = 20
+        _CubeMap("折射天空盒子", Cube) = "_Skybox" {}
+        _Distortion("折射扭曲程度", Range(0, 100)) = 10
+        _RefractionAmount("折射程度", Range(0, 1)) = 1
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" }
+        Tags { "RenderType"="Transparent" "LightMode"="ForwardBase" "Queue"="Transparent"}
         LOD 100
 
         Pass
@@ -26,7 +24,6 @@ Shader "My/Glass"
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc"
 
-            float4 _Color;
             //变量对应
             sampler2D _MainTex;
             //获取_MainTex缩放平移值
@@ -34,9 +31,9 @@ Shader "My/Glass"
             sampler2D _BumpTex;
             //获取_MainTex缩放平移值
             float4 _BumpTex_ST;
-            float _BumpScale;
-            float4 _Specular;
-            float _Gloss;
+            samplerCUBE _CubeMap;
+            float _Distortion;
+            float _RefractionAmount;
 
             //输入：顶点、法线、切线、纹理坐标
             struct appdata
