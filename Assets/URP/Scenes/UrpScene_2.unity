@@ -532,9 +532,107 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7730075261853647636, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -6999903014262566765, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -6435399192587130656, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -6363197299086480131, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: ac02883050f781845aa8495867a64951, type: 2}
+    - target: {fileID: -1003187738084553979, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
       propertyPath: m_Name
       value: Lumine FBX
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6066606027573732625, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: e66580bbc74f20f4a89356f4eea56d92, type: 2}
+    - target: {fileID: 6868716418057165105, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5fd3c87b1614d6a418a1c3e6b54b8651, type: 2}
+    - target: {fileID: 6868716418057165105, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 4c721b00a0d8a8e4795b4d65ca058ac6, type: 2}
+    - target: {fileID: 6868716418057165105, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: 'm_Materials.Array.data[2]'
+      value: 
+      objectReference: {fileID: 2100000, guid: d4d1f3d14d32c5046afebe8b03a8ebfc, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 1505834926049791475, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+--- !u!1001 &1849362975
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1.042
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 816201aa2f2c07f4bb0544114a082838, type: 3}
+      propertyPath: m_Name
+      value: Lumine FBX Origin
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
@@ -548,5 +646,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 1513380332}
   - {fileID: 40686503}
+  - {fileID: 1849362975}
   - {fileID: 1838722973}
   - {fileID: 434588478}
