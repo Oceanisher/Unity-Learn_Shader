@@ -44,6 +44,9 @@ Shader "GenshinToon/Body"
             {
                 "LightMode" = "UniversalForward"
             }
+            
+            Cull Off //双面绘制，为了布料
+            
             HLSLPROGRAM
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN//主光源阴影、主光源阴影级联、主光源阴影屏幕空间
@@ -87,17 +90,19 @@ Shader "GenshinToon/Body"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
-                float2 uv : TEXCOORD0;
+                float2 uv0 : TEXCOORD0;
+                float2 uv1 : TEXCOORD1;
                 float4 color : COLOR0;
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 normalWS : TEXCOORD1;
-                float4 color : TEXCOORD2;
-                float4 shadowCoords : TEXCOORD3;
+                float2 uv0 : TEXCOORD0;
+                float2 uv1 : TEXCOORD1;
+                float3 normalWS : TEXCOORD2;
+                float4 color : TEXCOORD3;
+                float4 shadowCoords : TEXCOORD4;
             };
 
             // 官方版本的RampShadowID函数
@@ -133,21 +138,22 @@ Shader "GenshinToon/Body"
                 Varyings OUT;
                 VertexPositionInputs inputs = GetVertexPositionInputs(IN.positionOS.xyz);
                 OUT.positionHCS = inputs.positionCS;
-                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.uv0 = TRANSFORM_TEX(IN.uv0, _BaseMap);
+                OUT.uv1 = TRANSFORM_TEX(IN.uv1, _BaseMap);
                 OUT.normalWS.xyz = TransformObjectToWorldNormal(IN.normalOS, false);
                 OUT.color = IN.color;
                 OUT.shadowCoords = GetShadowCoord(inputs);
                 return OUT;
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            half4 frag(Varyings IN, float face : VFACE) : SV_Target
             {
                 //主光源
                 Light light = GetMainLight();
                 
                 //贴图
-                half4 baseColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                half4 lightMap = SAMPLE_TEXTURE2D(_LightMap, sampler_LightMap, IN.uv);
+                half4 baseColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, lerp(IN.uv0, IN.uv1, step(face, 0)));
+                half4 lightMap = SAMPLE_TEXTURE2D(_LightMap, sampler_LightMap, lerp(IN.uv0, IN.uv1, step(face, 0)));
                 
                 //半兰伯特模型
                 half3 L = normalize(light.direction);//归一化光源方向，这里的direction是反方向，也就是从顶点到光源的方向
