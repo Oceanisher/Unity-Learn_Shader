@@ -46,9 +46,7 @@ Shader "GenshinToon/Body"
             }
             HLSLPROGRAM
 
-            #pragma multi_compile _MAIN_LIGHT_SHADOWS //主光源阴影
-            #pragma multi_compile _MAIN_LIGHT_SHADOWS_CASCADE //主光源阴影级联
-            #pragma multi_compile _MAIN_LIGHT_SHADOWS_SCREEN //主光源阴影屏幕空间
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN//主光源阴影、主光源阴影级联、主光源阴影屏幕空间
 
             #pragma multi_compile_fragment _LIGHT_LAYERS //光照层
             #pragma multi_compile_fragment _LIGHT_COOKIES //光照Cookie
@@ -99,6 +97,7 @@ Shader "GenshinToon/Body"
                 float2 uv : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float4 color : TEXCOORD2;
+                float4 shadowCoords : TEXCOORD3;
             };
 
             // 官方版本的RampShadowID函数
@@ -132,10 +131,12 @@ Shader "GenshinToon/Body"
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
-                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                VertexPositionInputs inputs = GetVertexPositionInputs(IN.positionOS.xyz);
+                OUT.positionHCS = inputs.positionCS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.normalWS.xyz = TransformObjectToWorldNormal(IN.normalOS, false);
                 OUT.color = IN.color;
+                OUT.shadowCoords = GetShadowCoord(inputs);
                 return OUT;
             }
 
@@ -164,11 +165,13 @@ Shader "GenshinToon/Body"
                     half ambient = halfLambert;//环境光，直接使用halfLambert
                 #endif
 
-                //阴影
+                //阴影，加入了主光源阴影投射
+                half shadowAtten = MainLightRealtimeShadow(IN.shadowCoords);//主光源阴影，接受来自其他物体的阴影投射
                 half shadow = (ambient + halfLambert) * 0.5;//阴影，因为ambient、halfLambert的值范围都是0~1，所以相加之后乘以0.5就能把shadow控制在0~1的范围中
+                shadow *= shadowAtten;
                 shadow = lerp(shadow, 1, step(0.95, ambient));//非常亮的区域直接赋值为1
                 shadow = lerp(shadow, 0, step(ambient, 0.05));//非常暗的区域直接赋值为0
-
+                
                 //色阶
                 half isShadowArea = step(shadow, _ShadowPosition);//是否是阴影区域，小于_ShadowPosition，是在阴影区域
                 half shadowDepth = saturate((_ShadowPosition - shadow) / _ShadowPosition);//阴影深度，其实就是shadow值越远离_ShadowPosition，那么这个Depth就越大；由于可能有负值，所以需要限制在0~1之间
@@ -191,6 +194,7 @@ Shader "GenshinToon/Body"
                 #endif
                 
                 return float4(finalColor.rgb, 1);
+                // return float4(shadowAtten, shadowAtten, shadowAtten, 1);
             }
             ENDHLSL
         }

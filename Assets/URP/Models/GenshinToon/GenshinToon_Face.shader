@@ -39,9 +39,7 @@ Shader "GenshinToon/Face"
             }
             HLSLPROGRAM
 
-            #pragma multi_compile _MAIN_LIGHT_SHADOWS //主光源阴影
-            #pragma multi_compile _MAIN_LIGHT_SHADOWS_CASCADE //主光源阴影级联
-            #pragma multi_compile _MAIN_LIGHT_SHADOWS_SCREEN //主光源阴影屏幕空间
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN//主光源阴影、主光源阴影级联、主光源阴影屏幕空间
 
             #pragma multi_compile_fragment _LIGHT_LAYERS //光照层
             #pragma multi_compile_fragment _LIGHT_COOKIES //光照Cookie
@@ -87,14 +85,17 @@ Shader "GenshinToon/Face"
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
+                float4 shadowCoords : TEXCOORD3;
             };
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
-                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                VertexPositionInputs inputs = GetVertexPositionInputs(IN.positionOS.xyz);
+                OUT.positionHCS = inputs.positionCS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.normalWS.xyz = TransformObjectToWorldNormal(IN.normalOS, false);
+                OUT.shadowCoords = GetShadowCoord(inputs);
                 return OUT;
             }
 
@@ -133,6 +134,8 @@ Shader "GenshinToon/Face"
                 half sdf = step(mixValue, mixSdf); // 计算硬边界阴影
                 sdf = lerp(0, sdf, step(0, dot(LpHeadHorizon, headForwardDir))); // 计算右侧阴影
                 sdf *= shadowMask.g; // 使用G通道控制阴影强度
+                half shadowAtten = MainLightRealtimeShadow(IN.shadowCoords);//主光源阴影，接受来自其他物体的阴影投射
+                sdf *= shadowAtten;//加入主光源阴影
                 sdf = lerp(sdf, 1, shadowMask.a); // 使用A通道作为阴影遮罩
 
                 #if _USE_SDF_SHADOW
