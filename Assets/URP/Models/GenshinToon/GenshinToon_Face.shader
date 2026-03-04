@@ -7,6 +7,7 @@ Shader "GenshinToon/Face"
         //是否使用SDF阴影纹理
         [Toggle(_USE_SDF_SHADOW)] _UseSdfShadow("Use Sdf Shadow", Range(0, 1)) = 1
         //SDF纹理
+        //面部阴影不随Z轴进行变化，只会在左右方向变亮、变暗，这样最美观
         _SDF("SDF", 2D) = "white" {}
         //阴影遮罩纹理
         _ShadowMask("Shadow Mask", 2D) = "white" {}
@@ -123,7 +124,7 @@ Shader "GenshinToon/Face"
                 //面部阴影
                 half3 LpU = dot(L, headUpDir) / pow(length(headUpDir), 2) * headUpDir; // 计算光源方向在面部上方的投影
                 half3 LpHeadHorizon = normalize(L- LpU); // 光照方向在头部水平面上的投影
-                half value = acos(dot(LpHeadHorizon, headRightDir)) / 3.141592654; // 计算光照方向与面部右方的夹角
+                half value = acos(dot(LpHeadHorizon, headRightDir)) / PI; // 计算光照方向与面部右方的夹角
                 half exposeRight = step(value, 0.5); // 判断光照是来自右侧还是左侧
                 half valueR = pow(1 - value * 2, 3); // 右侧阴影强度
                 half valueL = pow(value * 2 - 1, 3); // 左侧阴影强度

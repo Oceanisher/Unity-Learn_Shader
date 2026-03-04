@@ -138,9 +138,9 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - _FaceFlushColor: {r: 1, g: 0, b: 0.03933859, a: 1}
-    - _HeadForward: {r: 0, g: 0.00000041723257, b: -1.0000005, a: 0}
-    - _HeadRight: {r: -1.0000005, g: 0, b: 0, a: 0}
-    - _HeadUp: {r: 0, g: 1, b: 0.00000041723257, a: 0}
+    - _HeadForward: {r: -0.99748194, g: 0.00000041723257, b: -0.070925355, a: 0}
+    - _HeadRight: {r: -0.070925355, g: 0, b: 0.99748194, a: 0}
+    - _HeadUp: {r: 0.00000041618185, g: 1, b: 0.000000029592258, a: 0}
     - _ShadowColor: {r: 1, g: 0.87, b: 0.87, a: 1}
     - _SpecColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   m_BuildTextureStacks: []

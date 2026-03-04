@@ -10,9 +10,11 @@ Shader "GenshinToon/Body"
         //是否启用环境光遮蔽AO
         [Toggle(_USE_LIGHTMAP_AO)] _UseLightMapAO("Use Light Map AO", Range(0, 1)) = 1
         
-        //Ramp色阶纹理
+        //Ramp色阶纹理，是一行一行的、每行颜色不同；同一行中从左到右颜色逐渐减淡
+        //也就是说每行的左边代表在阴影中的颜色，右边代表面向光的颜色
         _RampTex("Ramp Tex", 2D) = "white" {}
         //是否使用色阶阴影
+        //使用色阶阴影取代光照阴影，从而形成卡通化的渲染
         [Toggle(_USE_RAMP_SHADOW)] _UseRampShadow("Use Ramp Shadow", Range(0, 1)) = 1
         //阴影边缘宽度
         _ShadowRampWidth("Shadow Ramp Width", Float) = 1
@@ -151,7 +153,7 @@ Shader "GenshinToon/Body"
                 //主光源
                 Light light = GetMainLight();
                 
-                //贴图
+                //贴图，为了支持布料的双面渲染，需要根据朝向面的不同，选择不同的UV。正面使用UV0，反面使用UV1
                 half4 baseColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, lerp(IN.uv0, IN.uv1, step(face, 0)));
                 half4 lightMap = SAMPLE_TEXTURE2D(_LightMap, sampler_LightMap, lerp(IN.uv0, IN.uv1, step(face, 0)));
                 
@@ -181,9 +183,9 @@ Shader "GenshinToon/Body"
                 //色阶
                 half isShadowArea = step(shadow, _ShadowPosition);//是否是阴影区域，小于_ShadowPosition，是在阴影区域
                 half shadowDepth = saturate((_ShadowPosition - shadow) / _ShadowPosition);//阴影深度，其实就是shadow值越远离_ShadowPosition，那么这个Depth就越大；由于可能有负值，所以需要限制在0~1之间
-                shadowDepth = min(pow(shadowDepth, _ShadowSoftness), 1);//阴影深度值使用阴影柔和度，并限制不超过1
+                shadowDepth = min(pow(shadowDepth, _ShadowSoftness), 1);//阴影深度值使用阴影柔和度，并限制不超过1；用来决定在色阶纹理的U
                 half rampWidthFactor = IN.color.g * 2 * _ShadowRampWidth;//读取顶点中的G通道，计算出Ramp边缘影响因子
-                half shadowPosition = (_ShadowPosition - shadowFactor) / _ShadowPosition;//使用阴影因子计算阴影边界值
+                // half shadowPosition = (_ShadowPosition - shadowFactor) / _ShadowPosition;//使用阴影因子计算阴影边界值
 
                 half rampU = 1 - saturate(shadowDepth / rampWidthFactor);//计算在Ramp贴图UV中的U
                 half rampID = RampShadowID(lightMap.a, _UseRamp2, _UseRamp3, _UseRamp4, _UseRamp5, 1, 2, 3, 4, 5);//计算在Ramp贴图UV中的编号
