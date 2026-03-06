@@ -67,7 +67,10 @@ Shader "GenshinToon/Body"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            
+
+            //所有变量写到CBUFFER中，这样能够满足SRP的合批
+            //SRP能够对不同材质、相同变体，进行合批处理，原因就是SRP把材质的变量属性放在CBUFFER中，减少了设置变量的时间，从而进行合批
+            //UnityPerMaterial是每个材质设置
             CBUFFER_START(UnityPerMaterial)
                 TEXTURE2D(_BaseMap);
                 TEXTURE2D(_LightMap);
