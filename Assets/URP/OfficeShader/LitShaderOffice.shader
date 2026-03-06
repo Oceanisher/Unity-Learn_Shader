@@ -7,6 +7,8 @@ Shader "AnnotationURP/Lit"
         _WorkflowMode("WorkflowMode", Float) = 1.0
 
         //主纹理，Unity默认主纹理的名称是_BaseMap，如果想用其他的变量名作为主纹理，需要加上[MainTexture]。这个标签多个无效。
+        //对于非金属，_BaseMap提供漫反射颜色；对于金属，没有漫反射，_BaseMap提供镜面反射的高光颜色（即基础反射率 F0 的色彩部分）
+        //例如，黄金的 BaseMap 是金黄色，这决定了它反射光线的颜色倾向。
         [MainTexture] _BaseMap("Albedo", 2D) = "white" {}
         //主颜色，Unity默认主纹理的名称是_Color，如果想用其他的变量名作为主颜色，需要加上[MainColor]。这个标签多个无效。
         [MainColor] _BaseColor("Color", Color) = (1,1,1,1)
@@ -21,12 +23,15 @@ Shader "AnnotationURP/Lit"
 
         //金属度(0~1),金属工作流下控制金属感强度，仅在金属工作流下使用
         _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
-        //金属度贴图（R=金属度，A=光滑度），仅在金属工作流下使用
+        //金属度贴图（R=金属度，A=光滑度），仅在金属工作流下使用；R=1，金属；R=0，非金属
+        //由于金属度只有一个维度，所以有时候也会放在_BaseMap的Alpha通道中
+        //遵循物理的反光颜色，而不能手动调整反光颜色
         _MetallicGlossMap("Metallic", 2D) = "white" {}
 
         //高光颜色，仅在镜面工作流下使用
         _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
         //高光贴图（RGB=高光色，A光滑度），仅在镜面工作流下使用
+        //美术直接控制高光颜色，更加灵活，可以带来很多自由
         _SpecGlossMap("Specular", 2D) = "white" {}
 
         //ToggleOff如果不写标签，那么在pragma中这个变量需要被定义为"大写名称_OFF"形式

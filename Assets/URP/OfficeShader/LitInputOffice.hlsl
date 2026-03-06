@@ -178,6 +178,7 @@ half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
     return specGloss;
 }
 
+//环境光遮蔽AO采样
 half SampleOcclusion(float2 uv)
 {
     #ifdef _OCCLUSIONMAP
