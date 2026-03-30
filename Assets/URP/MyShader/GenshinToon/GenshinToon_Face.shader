@@ -194,7 +194,7 @@ Shader "GenshinToon/Face"
                 };
 
                 // 将阴影的世界空间顶点位置转换为适合阴影投射的裁剪空间位置
-                float4 GetShadowPositionHClip(Attributes input)
+                float4 GetShadowPositionHClipGenshin(Attributes input)
                 {
                     float3 positionWS = TransformObjectToWorld(input.positionOS.xyz); // 将本地空间顶点坐标转换为世界空间顶点坐标
                     float3 normalWS = TransformObjectToWorldNormal(input.normalOS); // 将本地空间法线转换为世界空间法线
@@ -220,7 +220,7 @@ Shader "GenshinToon/Face"
                 Varyings ShadowVS(Attributes IN)
                 {
                     Varyings OUT;
-                    OUT.positionHCS = GetShadowPositionHClip(IN);
+                    OUT.positionHCS = GetShadowPositionHClipGenshin(IN);
                     return OUT;
                 }
 
