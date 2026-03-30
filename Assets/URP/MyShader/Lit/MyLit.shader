@@ -10,6 +10,7 @@ Shader "Custom/MyLit"
         _Metallic("Metallic", Range(0.0, 1.0)) = 1
         //金属度贴图
         _MetallicMap("Metallic Map", 2D) = "white" {}
+        _AmbientStrength("Ambient Strength", Range(0.0, 1.0)) = 0.2
     }
 
     SubShader
@@ -37,6 +38,8 @@ Shader "Custom/MyLit"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+            #define PI 3.14159265359
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -63,6 +66,7 @@ Shader "Custom/MyLit"
                 half4 _BaseColor;
                 float _Smoothness;
                 float _Metallic;
+                half _AmbientStrength;
                 float4 _BaseMap_ST;
                 float4 _MetallicMap_ST;
             CBUFFER_END
@@ -116,17 +120,21 @@ Shader "Custom/MyLit"
             {
                 half4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
                 half3 albedo = baseMap.rgb;
-                half alpha = baseMap.a;
+                half alpha = baseMap.a * _Smoothness;
 
                 Light mainLight = GetMainLight();//主光源
 
-                //金属度计算:_MetallicMap采样 * _Metallic
-                half metallic = saturate(SAMPLE_TEXTURE2D(_MetallicMap, sampler_MetallicMap, IN.uv) * _Metallic);
+                //金属度计算:_MetallicMap采样的R通道 * _Metallic
+                half4 metallicMap = SAMPLE_TEXTURE2D(_MetallicMap, sampler_MetallicMap, IN.uv);
+                half metallic = saturate(metallicMap.r * _Metallic);
 
-                //FO基础反射率
-                float3 F0 = lerp(0.04, albedo, metallic);//非金属的反射率是0.04
-                //漫反射颜色
-                float3 diffuseColor = albedo * (1 - F0);//金属没有漫反射
+                //光滑度
+                half smoothness = saturate(_Smoothness * baseMap.a);
+                
+                // F0 基础反射率：非金属约 0.04，金属用 albedo；lerp 两端需同类型
+                float3 F0 = lerp((float3)0.04, albedo, metallic);
+                // 漫反射颜色：金属无漫反射，应为 (1 - metallic) 而非 (1 - F0)
+                float3 diffuseColor = albedo * (1.0 - metallic);
 
                 //归一化向量
                 float3 N = normalize(IN.normalWS);
@@ -148,13 +156,15 @@ Shader "Custom/MyLit"
                 //漫反射项
                 float3 diffuseTerm = diffuseColor / PI;
                 //镜面反射项
-                float D = D_GGX_My(NdotH, 1 - _Smoothness);
-                float G = G_Smith_My(NdotV, NdotL, 1 - _Smoothness);
+                float D = D_GGX_My(NdotH, 1 - smoothness);
+                float G = G_Smith_My(NdotV, NdotL, 1 - smoothness);
                 float3 F = F_Schlick_My(F0, VdotH);
                 float3 specularTerm = (D * G * F) / max(4.0 * NdotV * NdotL, 0.001);   // 避免除零
 
-                //计算最终颜色
-                float3 finalColor = (diffuseTerm + specularTerm) * mainLight.color * NdotL;
+                // 直接光（含衰减）；环境光避免背光过黑
+                float3 directLight = (diffuseTerm + specularTerm) * mainLight.color * mainLight.distanceAttenuation * NdotL;
+                float3 ambient = albedo * _AmbientStrength;
+                float3 finalColor = ambient + directLight;
                 return float4(finalColor, alpha);
             }
             

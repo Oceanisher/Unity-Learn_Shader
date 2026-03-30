@@ -253,6 +253,7 @@ Shader "AnnotationURP/Lit"
             ENDHLSL
         }
 
+        //阴影Pass，生成阴影贴图
         Pass
         {
             Name "ShadowCaster"
@@ -393,6 +394,7 @@ Shader "AnnotationURP/Lit"
             ENDHLSL
         }
 
+        //深度贴图Pass
         Pass
         {
             Name "DepthOnly"
@@ -486,6 +488,7 @@ Shader "AnnotationURP/Lit"
             ENDHLSL
         }
 
+        //只有在烘焙光照贴图的时候才会使用，主要工作时将材质的Albedo、Emission属性传递给Unity的烘焙系统，保证物体能被准确的计算出间接照明
         // This pass it not used during regular rendering, only for lightmap baking.
         Pass
         {
@@ -526,6 +529,7 @@ Shader "AnnotationURP/Lit"
             ENDHLSL
         }
 
+        //2D渲染才会使用，不使用光照、直接计算颜色，也会计算Alpha、以及Alpha裁切
         Pass
         {
             Name "Universal2D"

@@ -41,10 +41,12 @@ struct Varyings
     half4 tangentWS                : TEXCOORD3;    // xyz: tangent, w: sign
 #endif
 
-    //雾系数；若启用顶点光则打包为half4（x=fog,yzw=定点光），否则启用 fogFactor
+    //若启用顶点光则打包为half4（x=fog,yzw=定点光），否则启用 fogFactor
+    //x是雾系数，yzw是顶点光照
 #ifdef _ADDITIONAL_LIGHTS_VERTEX
     half4 fogFactorAndVertexLight   : TEXCOORD5; // x: fogFactor, yzw: vertex light 
 #else
+    //否则的话，只取雾系数
     half  fogFactor                 : TEXCOORD5;
 #endif
 
@@ -56,7 +58,7 @@ struct Varyings
     //切线空间视线，用于视差
 #if defined(REQUIRES_TANGENT_SPACE_VIEW_DIR_INTERPOLATOR)
     half3 viewDirTS                : TEXCOORD7;
-#endif
+#endif  
 
     //光照贴图 UV 或球谐（由 DECLARE_LIGHTMAP_OR_SH 决定）
     DECLARE_LIGHTMAP_OR_SH(staticLightmapUV, vertexSH, 8);
@@ -75,20 +77,26 @@ struct Varyings
     UNITY_VERTEX_OUTPUT_STEREO //VR双眼使用
 };
 
+//初始化输入数据
 void InitializeInputData(Varyings input, half3 normalTS, out InputData inputData)
 {
     inputData = (InputData)0;
-
+    
 #if defined(REQUIRES_WORLD_SPACE_POS_INTERPOLATOR)
+    //写入世界空间顶点坐标
     inputData.positionWS = input.positionWS;
 #endif
-
+    
 #if defined(DEBUG_DISPLAY)
+    //调试模式下，写入齐次裁剪空间顶点坐标
     inputData.positionCS = input.positionCS;
 #endif
 
+    //世界空间下的视线方向
     half3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
 #if defined(_NORMALMAP) || defined(_DETAIL)
+    //如果有法线贴图、或者细节贴图，那么要额外写入世界空间下的法线
+    //这里先计算出来切线空间下的转换矩阵，再使用这个矩阵，把切线空间下的法线、转换到世界空间
     float sgn = input.tangentWS.w;      // should be either +1 or -1
     float3 bitangent = sgn * cross(input.normalWS.xyz, input.tangentWS.xyz);
     half3x3 tangentToWorld = half3x3(input.tangentWS.xyz, bitangent.xyz, input.normalWS.xyz);
@@ -98,26 +106,36 @@ void InitializeInputData(Varyings input, half3 normalTS, out InputData inputData
     #endif
     inputData.normalWS = TransformTangentToWorld(normalTS, tangentToWorld);
 #else
+    //如果没有启用法线贴图、或者细节贴图，那么世界空间的法线使用input中的数据
     inputData.normalWS = input.normalWS;
 #endif
 
+    //将法线标准化
     inputData.normalWS = NormalizeNormalPerPixel(inputData.normalWS);
     inputData.viewDirectionWS = viewDirWS;
 
+    //如果使用顶点阴影，那么从Input中获取阴影坐标
 #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
     inputData.shadowCoord = input.shadowCoord;
+    //如果主光源开启了计算阴影，那么需要传入世界顶点坐标、进行阴影坐标计算
 #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
     inputData.shadowCoord = TransformWorldToShadowCoord(inputData.positionWS);
+    //否则，不使用阴影
 #else
     inputData.shadowCoord = float4(0, 0, 0, 0);
 #endif
+    //雾与定点光打包，如果启用顶点光，那么雾效和顶点光打在一个half4中
+    //x是雾系数，yzw是顶点光照
 #ifdef _ADDITIONAL_LIGHTS_VERTEX
+    //计算雾系数
     inputData.fogCoord = InitializeInputDataFog(float4(input.positionWS, 1.0), input.fogFactorAndVertexLight.x);
+    //写入顶点光颜色
     inputData.vertexLighting = input.fogFactorAndVertexLight.yzw;
 #else
     inputData.fogCoord = InitializeInputDataFog(float4(input.positionWS, 1.0), input.fogFactor);
 #endif
 
+    //标准化的屏幕空间UV坐标
     inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
 
     #if defined(DEBUG_DISPLAY)
@@ -220,10 +238,11 @@ Varyings LitPassVertex(Attributes input)
 #endif
     OUTPUT_SH4(vertexInput.positionWS, output.normalWS.xyz, GetWorldSpaceNormalizeViewDir(vertexInput.positionWS), output.vertexSH, output.probeOcclusion);
 
-    //雾与定点光打包，如果启用顶点光，那么雾效和顶点光打在一个half4中
+    //雾与顶点光，如果启用顶点光，那么雾效和顶点光打在一个half4中
 #ifdef _ADDITIONAL_LIGHTS_VERTEX
     output.fogFactorAndVertexLight = half4(fogFactor, vertexLight);
 #else
+    //否则，只使用雾系数
     output.fogFactor = fogFactor;
 #endif
 
@@ -292,8 +311,8 @@ void LitPassFragment(
 
     //PBR光照与雾效、Alpha
     half4 color = UniversalFragmentPBR(inputData, surfaceData);//完整的PBR光照计算
-    color.rgb = MixFog(color.rgb, inputData.fogCoord);//混合雾效
-    color.a = OutputAlpha(color.a, IsSurfaceTypeTransparent(_Surface));
+    color.rgb = MixFog(color.rgb, inputData.fogCoord);//混合雾效，并放入最终颜色中
+    color.a = OutputAlpha(color.a, IsSurfaceTypeTransparent(_Surface));//
 
     outColor = color;//写入主渲染颜色
 

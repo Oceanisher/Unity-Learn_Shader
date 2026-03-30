@@ -7,6 +7,7 @@ Shader "Custom/TempLit"
         _Metallic("Metallic", Range(0.0, 1.0)) = 0
         _MetallicMap("Metallic Map", 2D) = "white" {}
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
+        _AmbientStrength("Ambient Strength", Range(0.0, 1.0)) = 0.2
     }
 
     SubShader
@@ -58,6 +59,7 @@ Shader "Custom/TempLit"
                 half4 _BaseColor;
                 half _Metallic;
                 half _Smoothness;
+                half _AmbientStrength;
                 float4 _BaseMap_ST;
                 float4 _MetallicMap_ST;
             CBUFFER_END
@@ -67,11 +69,12 @@ Shader "Custom/TempLit"
             #define PI 3.14159265359
 
             // 法线分布 NDF - GGX/Trowbridge-Reitz
+            // 正确形式: D = a² / (π * (NdotH²*(a²-1) + 1)²)，注意是 NdotH² 不是 NdotH
             float D_GGX_TEMP(float NdotH, float roughness)
             {
                 float a = roughness * roughness;
                 float a2 = a * a;
-                float d = (NdotH * (NdotH * (a2 - 1.0) + 1.0));
+                float d = NdotH * NdotH * (a2 - 1.0) + 1.0;
                 d = d * d * PI;
                 return (d > 0.0) ? (a2 / max(d, 1e-7)) : 0.0;
             }
@@ -149,8 +152,12 @@ Shader "Custom/TempLit"
                 float3 F = F_Schlick_TEMP(F0, VdotH);
                 float3 specularTerm = (D * G * F) / max(4.0 * NdotV * NdotL, 1e-7);
 
-                float3 brdf = (diffuseTerm + specularTerm) * mainLight.color * NdotL;
-                return half4(brdf, alpha);
+                // 直接光：乘上 distanceAttenuation 以正确衰减（方向光为 1）
+                float3 directLight = (diffuseTerm + specularTerm) * mainLight.color * mainLight.distanceAttenuation * NdotL;
+                // 环境光：避免背光/阴影处过暗
+                float3 ambient = albedo * _AmbientStrength;
+                float3 finalColor = ambient + directLight;
+                return half4(finalColor, alpha);
             }
             ENDHLSL
         }

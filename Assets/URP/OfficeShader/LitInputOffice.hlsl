@@ -14,7 +14,7 @@
 #endif
 
 //常量缓冲区，Direct10以及后面的版本引入的
-//常量缓冲区出现之前，切换顶点着色器、片元着色器是需要重新写入数据的；而常量缓冲区解决了这个需要重复设置数据的问题
+//常量缓冲区出现之前，切换顶点着色器、片元着色器是需要重新写入常量数据的；而常量缓冲区解决了这个需要重复设置数据的问题
 //是在GPU中单独划分出一块存储区域，专门用于存储常量，这样一来就不需要多次存储常量，能够进行高效计算
 // NOTE: Do not ifdef the properties here as SRP batcher can not handle different layouts.
 CBUFFER_START(UnityPerMaterial)
@@ -146,7 +146,7 @@ TEXTURE2D(_ClearCoatMap);       SAMPLER(sampler_ClearCoatMap);
 #endif
 
 //金属和高光采样函数
-//在金属/高光工作流里分别表示金属度或高光色 + 光滑度
+//在金属/高光工作流里分别表示金属度或高光色 + 光滑度（返回结果中的alpha通道）
 //albedoAlpha代表光滑度，只在当光滑度存在于主纹理albedo的Alpha通道中时才会使用
 half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
 {
@@ -171,7 +171,7 @@ half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
     #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
         specGloss.a = albedoAlpha * _Smoothness;//如果光滑度来自Albedo的Alpha通道，那么使用albedoAlpha * 材质_Smoothness
     #else
-        specGloss.a = _Smoothness;//否则直接使用贴图的alpha通道 * 材质_Smoothness
+        specGloss.a = _Smoothness;//否则直接使用材质_Smoothness；为什么不需要乘了，是因为没有贴图的alpha值了
     #endif
 #endif
 
@@ -179,13 +179,15 @@ half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
 }
 
 //环境光遮蔽AO采样
+//AO贴图只使用G通道，范围是1.0~occ，1是代表白光没有遮蔽、occ是遮蔽后的值
 half SampleOcclusion(float2 uv)
 {
-    #ifdef _OCCLUSIONMAP
+    #ifdef _OCCLUSIONMAP 
         half occ = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, uv).g;
+        //根据环境光遮蔽的强度，返回1.0~occ之间的值
         return LerpWhiteTo(occ, _OcclusionStrength);
     #else
-        return half(1.0);
+        return half(1.0); //没有AO贴图，直接返回1
     #endif
 }
 
@@ -266,28 +268,40 @@ half3 ApplyDetailNormal(float2 detailUv, half3 normalTS, half detailMask)
 #endif
 }
 
+//初始化PBR光照的表面数据
 inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
 {
+    //采样主纹理
+    //根据alpha通道决定是否丢弃片元；不丢弃的话就记录到SurfaceData的alpha中
     half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
     outSurfaceData.alpha = Alpha(albedoAlpha.a, _BaseColor, _Cutoff);
 
+    //采样金属/高光纹理颜色，这个变量在后面用
     half4 specGloss = SampleMetallicSpecGloss(uv, albedoAlpha.a);
+    //使用主纹理颜色*主颜色，记录到albedo中
     outSurfaceData.albedo = albedoAlpha.rgb * _BaseColor.rgb;
     outSurfaceData.albedo = AlphaModulate(outSurfaceData.albedo, outSurfaceData.alpha);
 
 #if _SPECULAR_SETUP
+    //高光工作流，金属度是1，specular填写上面采样的高光纹理RGB
     outSurfaceData.metallic = half(1.0);
     outSurfaceData.specular = specGloss.rgb;
 #else
+    //金属工作流，金属度填写上面采样的金属纹理的R通道，高光度是0
     outSurfaceData.metallic = specGloss.r;
     outSurfaceData.specular = half3(0.0, 0.0, 0.0);
 #endif
 
+    //光滑度在SampleMetallicSpecGloss中已经进行计算了，这里直接取值即可
     outSurfaceData.smoothness = specGloss.a;
+    //切线空间法线
     outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
+    //AO环境光遮蔽
     outSurfaceData.occlusion = SampleOcclusion(uv);
+    //自发光
     outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
 
+    //清漆层
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
     half2 clearCoat = SampleClearCoat(uv);
     outSurfaceData.clearCoatMask       = clearCoat.r;
@@ -297,6 +311,7 @@ inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfa
     outSurfaceData.clearCoatSmoothness = half(0.0);
 #endif
 
+    //细节贴图
 #if defined(_DETAIL)
     half detailMask = SAMPLE_TEXTURE2D(_DetailMask, sampler_DetailMask, uv).a;
     float2 detailUv = uv * _DetailAlbedoMap_ST.xy + _DetailAlbedoMap_ST.zw;
