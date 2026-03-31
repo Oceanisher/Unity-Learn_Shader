@@ -5,11 +5,11 @@ Shader "Custom/Simple2DUvFlow"
     {
         [MainColor] _BaseColor ("Base Color(主颜色)", Color) = (1,1,1,1)
         [MainTexture] _BaseMap ("Base Map(纹理)", 2D) = "white" {}
-        _USpeed ("U Speed(水平滚动速度)", float) = 0
-        _VSpeed ("V Speed(竖直滚动速度)", float) = 0
+        _USpeed ("U Speed(水平滚动速度)", Float) = 0
+        _VSpeed ("V Speed(竖直滚动速度)", Float) = 0
         //其实可以直接使用Base Map的Tiling功能
-        _UTile("U Tile(水平平铺数量)", float) = 1
-        _VTile("V Tile(竖直平铺数量)", float) = 1
+        _UTile("U Tile(水平平铺数量)", Float) = 1
+        _VTile("V Tile(竖直平铺数量)", Float) = 1
     }
     SubShader
     {
