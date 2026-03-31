@@ -91,7 +91,7 @@ Shader "Custom/Simple2DDissolve"
                 half4 noise = SAMPLE_TEXTURE2D(_DissolveMap, sampler_BaseMap, IN.uvNoise);
                 half alpha = noise.r + _Proc;
                 half clipAlpha = 1 - alpha - 0.05;
-                clip(clipAlpha);
+                clip(clipAlpha * step(0.01, _Proc));
                 half3 finalColor = baseColor.rgb * _BaseColor.rgb;
                 //内层颜色
                 half edgeFactor = (1 - smoothstep(0, _InnerWidth, clipAlpha)) * step(0.001, _Proc);
